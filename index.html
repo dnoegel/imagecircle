@@ -1,0 +1,229 @@
+<html>
+
+<body onload="go()" style="font-size:20px;">
+
+<h1>Image Circle</h1>
+<p>
+    This document shows the image circle of various lenses as well as the required image circle of various film formats.
+    This will help you decide, which lens is suitable for which image format - and also how much room each lens has
+    for movements such as tilt / shift.
+
+    <br><br>
+
+    <a id="download" download="canvas.png">
+        <button style="font-size:25px;background-color: darkgrey" type="button" onClick="download()">Download</button>
+    </a>
+
+</p>
+
+<h2>Filter</h2>
+<div>
+    <form method="GET">
+        <select name="maker" id="maker" multiple>
+            <option value="Schneider">Schneider-Kreuznach</option>
+            <option value="Rodenstock">Rodenstock</option>
+            <option value="Fuji">Fuji</option>
+            <option value="Nikon">Nikkor</option>
+        </select>
+
+        <select name="focal" id="focal" multiple>
+            <option value="100">1-100</option>
+            <option value="200">101-200</option>
+            <option value="300">201-300</option>
+            <option value="400">301-400</option>
+            <option value="500">401-500</option>
+            <option value="600">501-600</option>
+        </select>
+
+        <input type="submit" value="Filter">
+    </form>
+</div>
+<canvas id="test" width="2000" height="2000"></canvas>
+
+
+<script>
+    var pixelFactor = 5;
+    var fullCircle = true;
+
+    var canvas = document.getElementById("test");
+    var ctx = canvas.getContext("2d");
+
+
+    w = canvas.width;
+    h = canvas.height;
+
+    circleCenterX = w / 2;
+    circleCenterY = h - (h * 0.2);
+
+
+    function range(from, to, step = 1) {
+        var result = [];
+        for (var i = from; i <= to; i += step) {
+            result.push(i);
+        }
+
+        return result;
+    }
+
+    var getParams = function () {
+        var url = window.location.href;
+        var params = {};
+        var parser = document.createElement('a');
+        parser.href = url;
+        var query = parser.search.substring(1);
+        var vars = query.split('&');
+        for (var i = 0; i < vars.length; i++) {
+            var pair = vars[i].split('=');
+            if (!params[pair[0]]) {
+                params[pair[0]] = [];
+            }
+            params[pair[0]].push(decodeURIComponent(pair[1]));
+        }
+        return params;
+    };
+
+    var filteredMaker = getParams().maker;
+    var filteredFocalLength = [];
+
+    if (getParams().focal) {
+        getParams().focal.forEach(focal => {
+            filteredFocalLength = filteredFocalLength.concat(range(focal - 99, focal, 1));
+        });
+    }
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+</script>
+<script src="lenses.js"></script>
+<script>
+    function go() {
+
+        let formats = [
+            // small formats
+            ["22.3x14.9", "APS-C"],
+            ["36x24", "\"FullFrame\""],
+
+            // medium format
+            [toMm("6x4.5"), "6x4,5"],
+            [toMm("6x6"), "6x6"],
+            [toMm("6x7"), "6x7"],
+            [toMm("6x8"), "6x8"],
+            [toMm("6x9"), "6x9"],
+
+            // largeformat
+            [toMm("4x5", true), "4x5"],
+            [toMm("5x7", true), "5x7"],
+            [toMm("8x10", true), "8x10"],
+            [toMm("11x14", true), "11x14"]
+        ];
+
+        function toMm(inch, isInch = false) {
+            var factor = isInch ? 25.4 : 10;
+
+            var [x, y] = inch.split("x");
+
+            return x * factor + "x" + y * factor;
+        }
+
+
+        let colors = [
+            'maroon',
+            'brown',
+            'red',
+            'orange',
+            'pink',
+            'apricot',
+            'green',
+            'cyan',
+            'purple',
+            'magenta',
+        ];
+
+        formats.forEach(drawNegativeFormat);
+
+
+        function drawNegativeFormat(format, idx) {
+
+            var [x, y] = format[0].split("x");
+
+            var diagonal = Math.round(Math.sqrt((x * x) + (y * y)));
+
+
+            ctx.fillStyle = colors[idx];
+            ctx.strokeStyle = colors[idx];
+            ctx.lineWidth = "4";
+            ctx.strokeRect(circleCenterX - x * pixelFactor / 2, circleCenterY - y / 2 * pixelFactor, x * pixelFactor, y * pixelFactor);
+            ctx.stroke();
+
+            var txt = format[1] + " - " + diagonal;
+            ctx.font = "25px Arial";
+            //ctx.fillText(txt, x * pixelFactor - ctx.measureText(txt).width - 5, h - y * pixelFactor - 5);
+            ctx.fillText(txt, fullCircle ? circleCenterX - x * pixelFactor / 2 + 5 : 5, circleCenterY - y / 2 * pixelFactor - 5);
+
+
+        }
+
+        range(10, 800, 10).forEach(drawCircle);
+
+
+        function drawCircle(mm) {
+
+            ctx.strokeStyle = "black";
+            ctx.fillStyle = "black";
+
+            ctx.lineWidth = mm % 50 == 0 ? 2 : 1;
+            ctx.beginPath();
+            //ctx.arc(0, h, mm * pixelFactor / 2, 1.5 * Math.PI, 0, false);
+            ctx.arc(circleCenterX, circleCenterY, mm * pixelFactor / 2, 2 * Math.PI, 0, false);
+            ctx.stroke();
+
+            drawLineIndicator(mm);
+
+        }
+
+        function drawLineIndicator(mm) {
+            ctx.font = "15px Arial";
+
+            if (mm % 50 == 0) {
+                ctx.font = "bold " + ctx.font;
+            }
+
+            txt = mm + " mm";
+            //ctx.fillText(txt, 0, h-(mm*pixelFactor/2)+6);
+            ctx.save();
+            ctx.beginPath();
+            ctx.translate(circleCenterX, circleCenterY);
+            ctx.rotate(45 * Math.PI / 180);
+            ctx.translate(-circleCenterX, -circleCenterY);
+            ctx.fillStyle = "white";
+            ctx.fillRect(circleCenterX + -ctx.measureText(txt).width / 2 - 2, circleCenterY - (mm * pixelFactor / 2) - 6 - 2, ctx.measureText(txt).width + 4, 15 + 2);
+            ctx.fillStyle = "black";
+            ctx.fillText(txt, circleCenterX + -ctx.measureText(txt).width / 2, circleCenterY - (mm * pixelFactor / 2) + 6);
+            ctx.closePath();
+            ctx.restore();
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.translate(circleCenterX, circleCenterY);
+            ctx.rotate(-45 * Math.PI / 180);
+            ctx.translate(-circleCenterX, -circleCenterY);
+            ctx.fillStyle = "white";
+            ctx.fillRect(circleCenterX + -ctx.measureText(txt).width / 2 - 2, circleCenterY - (mm * pixelFactor / 2) - 6 - 2, ctx.measureText(txt).width + 4, 15 + 2);
+            ctx.fillStyle = "black";
+            ctx.fillText(txt, circleCenterX + -ctx.measureText(txt).width / 2, circleCenterY - (mm * pixelFactor / 2) + 6);
+            ctx.closePath();
+            ctx.restore();
+        }
+
+    }
+
+    function download() {
+        var download = document.getElementById("download");
+        var image = document.getElementById("test").toDataURL("image/png").replace("image/png", "image/octet-stream");
+        download.setAttribute("href", image);
+        //download.setAttribute("download","archive.png");
+    }
+
+</script>
+</body>
+</html>
